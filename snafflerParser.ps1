@@ -42,7 +42,7 @@
 	.\snafflerparser.ps1 -in mysnaffleroutput.tvs
 	(will try to load mysnaffleroutput.tvs and output in TXT format)
 	.Example
-	.\snafflerparser.ps1 -out csv -split
+	.\snafflerparser.ps1 outformat csv -split
 	(will store results as CSV and split the files by severity)
 	.Example
 	.\snafflerparser.ps1 -sort unc
@@ -465,5 +465,4 @@ if ($gridview) {
 if ($pte) {
 	write-host "[*] Will export $($sharescount.lines) shares to explorer."
 	explorerpp($shares)
-		
 }
