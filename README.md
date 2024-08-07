@@ -9,7 +9,7 @@ This script Parse the Snaffler outputfile (TSV format required) and:
 
 # ShowCase
 
-# Preciditions and usage
+# Preconditions and usage
 Snaffler must be executed with the `-y` switch in order to create an output file in the TSV format.
 
 Example:
