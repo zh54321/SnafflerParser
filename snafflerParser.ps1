@@ -6,32 +6,33 @@
 	Adds explorer++ integration for easy file and share browsing (runas /netonly support)
 	.Parameter outformat
 	Output options: 
-	-all : write txt, csv, html and json
-	-txt : write txt (default)
-	-csv : write csv
-	-json : write json
-	-html : write html
+		- all : write txt, csv, html and json
+		- txt : write txt
+		- csv : write csv
+		- json : write json
+		- html : write html
+		- default : write txt, csv, html
 	.Parameter in
-	Input file (Fullpath or Filename)
+	Input file (full path or file name)
 	Defaults to snafflerout.txt
 	.Parameter sort
 	Field to sort output:
-	- modified:File modified date (default)
-	- keyword: Snaffler keyword
-	- unc: File UNC Path
+		- modified: File modified date (default)
+		- keyword: Snaffler keyword
+		- unc: File UNC Path
 	- reason: Reason why Snaffler flagged the file
 	.Parameter split
-	Will create splitted (by severity blac, red, yellow ,green) exports
+	Will create splitted (by severity black, red, yellow, green) export files
 	.Parameter gridview
-	Analyze the file and display in gridview
+	Analyze the file and display in PS gridview
 	.Parameter gridviewload
-	Switch to load an existing gridview output (CSV)
+	Switch to load an existing PS gridview output (CSV)
 	.Parameter gridin
-	Input file (Full path or Filename)
+	Input file (full path or filen ame)
 	Defaults to snafflerout.txt_files_gridview.csv
 	.Parameter pte
-	pte (paths to explorer) exports the shares to Explorer++ as bookmarks (grouped by host)
-	Explorer++ must be configured to be in Portable mode (settings saved in xml file) and that only one instance is allowed.
+	pte (pass to explorer) exports the shares to Explorer++ as bookmarks (grouped by host)
+	Explorer++ must be configured to be in Portable mode (settings saved in xml file) and only one instance is allowed.
 	.Parameter snaffel
 	Run Snaffler and execute parser with default settings.
 	.Example
@@ -70,7 +71,7 @@ Param (
 	$sort = "modified",
 	[ValidateSet("all", "csv", "txt", "json","html")]
 	[String[]]
-	$outformat = "txt",
+	$outformat = "default",
 	[switch]
 	$gridview,
 	[switch]
@@ -151,10 +152,11 @@ function explorerpp($objects){
 			$node.ParentNode.RemoveChild($node)| Out-Null
 		}
 		
-		#Coutners for stats and XML Object IDs
+		#Counter for stats and XML Object IDs
 		$counteruncstats = 0
 		$counterunc = 0
 		$counterhosts = 0
+
 
 		#Go trough all objects to great booksmarks folder and bookmark entry
 		foreach ($element in $objects.unc) {
@@ -243,7 +245,7 @@ TD {border-width: 1px; padding: 3px; border-style: solid; border-color: black;}
 
 "@
 	write-host "[*] Store: $($outputname)_files_$($name).html"
-	$object | ConvertTo-Html -Title "Snaffler $outputname" -Head $Header  | Out-File -FilePath "$($outputname)_files_$($name).html" -Encoding asci
+	$object | ConvertTo-Html -Title "Snaffler $outputname" -Head $Header  | Out-File -FilePath "$($outputname)_files_$($name).html"
 }
 
 
@@ -294,7 +296,7 @@ $shares = foreach ($line in $data) {
     }
 }
 
-#Sort and perform dedup (in snaffler was runned twice)
+#Sort and perform dedup (in case snaffler was runned twice)
 $shares = $shares | Sort-Object -Property unc -Unique
 
 # Check share count and write to file
@@ -324,7 +326,7 @@ $files = foreach ($line in $data) {
     }
 }
 
-## ugly hack to default to descending sort, maybe fix
+## Ugly hack to default to descending sort, maybe fix
 if ($sort -eq "modified") {
 
 	$blacks = $files | where-object severity -EQ "Black" | sort-object -Property $sort -Descending
@@ -361,7 +363,7 @@ if ($filesum -ge 1) {
 
 	#Write outputs depening on desired format
 	if ($outformat -eq "all"){
-		write-host "[*] Exporting full CSV + TXT + JSON"
+		write-host "[*] Exporting full CSV + TXT + JSON + HTML"
 		exporttxt $fulloutput full
 		exportcsv $fulloutput full
 		exportjson $fulloutput full
@@ -384,7 +386,26 @@ if ($filesum -ge 1) {
 			if ($redscount -ge 1) {exporthtml $reds reds}
 			if ($yellowscount -ge 1) {exporthtml $yellows yellows}
 			if ($greenscount -ge 1) {exporthtml $greens greens}
-			
+		}
+	} elseif ($outformat -eq "default") {
+		write-host "[*] Exporting full CSV + TXT + HTML"
+		exporttxt $fulloutput full
+		exportcsv $fulloutput full
+		exporthtml $fulloutput full
+		if ($split) {
+			write-host "[*] Exporting splitted CSV + TXT"
+			if ($blackscount -ge 1) {exportcsv $blacks blacks}
+			if ($redscount -ge 1) {exportcsv $reds reds}
+			if ($yellowscount -ge 1) {exportcsv $yellows yellows}
+			if ($greenscount -ge 1) {exportcsv $greens greens}
+			if ($blackscount -ge 1) {exporttxt $blacks blacks}
+			if ($redscount -ge 1) {exporttxt $reds reds}
+			if ($yellowscount -ge 1) {exporttxt $yellows yellows}
+			if ($greenscount -ge 1) {exporttxt $greens greens}
+			if ($blackscount -ge 1) {exporthtml $blacks blacks}
+			if ($redscount -ge 1) {exporthtml $reds reds}
+			if ($yellowscount -ge 1) {exporthtml $yellows yellows}
+			if ($greenscount -ge 1) {exporthtml $greens greens}
 		}
 	} elseif ($outformat -eq "txt") {
 		write-host "[*] Exporting full TXT"
