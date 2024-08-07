@@ -2,10 +2,10 @@
 Tired of the messy Snaffler output?
 
 This script Parse the Snaffler outputfile (TSV format required) and:
-    - Beautify: Proper tables and different output formats like TXT, CSV, HTML, JSON or PS Gridview.
-    - Sort based on the severity (black, red, yellow, green) and then by date or unc.
-    - Can export all the shares to the Explorer++ config files as bookmarks.
-    - Generate a list of all shares Snaffler was able to access.
+- Beautify: Proper tables and different output formats like TXT, CSV, HTML, JSON or PS Gridview.
+- Sort based on the severity (black, red, yellow, green) and then by date or unc.
+- Can export all the shares to the Explorer++ config files as bookmarks.
+- Generate a list of all shares Snaffler was able to access.
 
 # ShowCase
 
@@ -33,10 +33,10 @@ Additonally a PS gridview output can be showed using ``-gridview`.
 
 ## Sorting
 The output will always be sorted regarding the severity than it can be sorted by:
-    - `-sort modified` File modified date (default)
-    - `-sort keyword` Snaffler keyword
-    - `-sort unc` File UNC Path
-    - `-sort reason` Reason why Snaffler flagged the file
+- `-sort modified` File modified date (default)
+- `-sort keyword` Snaffler keyword
+- `-sort unc` File UNC Path
+- `-sort reason` Reason why Snaffler flagged the file
 
 ## Explorer++ integration
 
