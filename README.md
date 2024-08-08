@@ -1,8 +1,9 @@
 # Snaffler Output File Parser
-Tired of the messy Snaffler output?
+Especially in large environments, the Snaffler output gets very large and time-consuming to analyze.
 
-This script Parse the Snaffler outputfile (TSV format required) and:
-- Beautify: Proper tables and different output formats like TXT, CSV, HTML, JSON or PS Gridview.
+This script parse the Snaffler outputfile (TSV format required) and:
+- Beautify it: Proper tables and different output formats like TXT, CSV, HTML, JSON or PS Gridview.
+- The HTML files contains direct links to the parent folder of the file and a download link for the file itself.
 - Sort based on the severity (black, red, yellow, green) and then by date or unc.
 - Can export all the shares to the Explorer++ config files as bookmarks.
 - Generate a list of all shares Snaffler was able to access.

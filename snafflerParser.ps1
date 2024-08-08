@@ -238,7 +238,13 @@ function exportjson($object ,$name){
 function exporthtml($object ,$name){
 $Header = @"
 <style>
-table {
+    h2 {
+        font-family: Arial, Helvetica, sans-serif;
+        color: #000099;
+        font-size: 20px;
+        font-weight: bold;
+    }
+	table {
 		font-size: 14px;
 		border: 0px; 
 		font-family: Arial, Helvetica, sans-serif;
@@ -272,8 +278,11 @@ table {
 </style>
 
 "@
+
 	write-host "[*] Store: $($outputname)_loot_$($name).html"
-	$htmlOutput = $object | ConvertTo-Html -Title "Snaffler $outputname" -Head $Header
+	$inputInfo = $baseInfo | ConvertTo-Html -As List -Fragment -PreContent "<h2>Input Information</h2>"
+	$mainTable = $object | ConvertTo-Html -Fragment -PreContent "<h2>Files</h2>"
+	$htmlOutput = ConvertTo-Html -Head $Header -Body "$inputInfo $mainTable"
 
 	#Replace placeholder strings
 	$htmlOutput = $htmlOutput -replace '@@o@@','<'
@@ -314,6 +323,23 @@ if (!(Test-Path -Path $in -PathType Leaf)) {
 		write-host "[+] Input file has $inputlines Lines"
 		$data = Import-Csv -Delimiter "`t" -Path $in -Header user, timestamp , typ, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 		$outputname = (Get-Item $in).BaseName
+
+		$baseInfo = [PsCustomObject]@{
+			InputFile = Split-Path $in -Leaf
+			SHA265 = $(Get-FileHash $in).Hash
+		}
+
+		$firstLine = Get-Content $in -TotalCount 1
+
+		# Define the regular expression pattern to extract Computername, USer and timestamp
+		$pattern = '\[(?<machine>.*?)\\(?<user>.*?)@.*?\]\s+(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}Z)'
+
+
+		if ($firstLine -match $pattern) {
+			$baseInfo | Add-Member -NotePropertyName Snaffler_ComputerName -NotePropertyValue $matches['machine']
+			$baseInfo | Add-Member -NotePropertyName Snaffler_User -NotePropertyValue $matches['user']
+			$baseInfo | Add-Member -NotePropertyName Snaffler_StartTime -NotePropertyValue $matches['timestamp']
+		}
 	} else {
 		write-host "[!] Input file seems to be empty"
 		exit
