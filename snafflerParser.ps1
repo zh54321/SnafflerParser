@@ -279,7 +279,7 @@ if (!(Test-Path -Path $in -PathType Leaf)) {
 	if ($inputlines -ge 1) {
 		write-host "[+] Input file has $inputlines Lines"
 		$data = Import-Csv -Delimiter "`t" -Path $in -Header user, timestamp , typ, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-		$outputname = Split-Path -Path $in -Leaf
+		$outputname = (Get-Item $in).BaseName
 	} else {
 		write-host "[!] Input file seems to be empty"
 		exit
