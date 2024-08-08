@@ -29,7 +29,7 @@
 	Switch to load an existing PS gridview output (CSV)
 	.Parameter gridin
 	Input file (full path or filen ame)
-	Defaults to snafflerout.txt_files_gridview.csv
+	Defaults to snafflerout.txt_loot_gridview.csv
 	.Parameter pte
 	pte (pass to explorer) exports the shares to Explorer++ as bookmarks (grouped by host)
 	Explorer++ must be configured to be in Portable mode (settings saved in xml file) and only one instance is allowed.
@@ -52,7 +52,7 @@
 	(Will  additionally show the output in PS Gridview and save the gridview for later use)
 	.Example
 	.\snafflerparser.ps1 -gridviewload
-	(Load a existing gridview (defaults to snafflerout.txt_files_gridview.csv))
+	(Load a existing gridview (defaults to snafflerout.txt_loot_gridview.csv))
 	.Example
 	.\snafflerparser.ps1 -gridviewload -gridin mygridviewfile.csv
 	(Load specific gridview file)
@@ -61,7 +61,7 @@
 	(Add Shares as Bookmarks to explorer++)
 
 	.LINK
-	https://github.com/zh54321/ADScout
+	https://github.com/zh54321/snaffler_parser
 #>
 Param (
 	[String[]]
@@ -79,7 +79,7 @@ Param (
 	[switch]
 	$split,
 	[String[]]
-	$gridin = 'snafflerout.txt_files_gridview.csv',
+	$gridin = 'snafflerout.txt_loot_gridview.csv',
 	[String[]]
 	$exlorerpp = '.\Explorerpp.exe',
 	[switch]
@@ -103,9 +103,9 @@ function gridview($action){
 
 	} elseif ($action -eq "start") {
 		write-host "[*] Writing Gridview output file for further use"
-		$fulloutput | Export-Csv -Path "$($outputname)_files_gridview.csv" -NoTypeInformation
+		$fulloutput | select-object severity,reason,keyword,modified,unc,content | Export-Csv -Path "$($outputname)_loot_gridview.csv" -NoTypeInformation
 		write-host "[*] Starting Gridview (opens in background)"
-		$passthruobjec = $fulloutput |  Out-GridView -Title "FullView" -PassThru
+		$passthruobjec = $fulloutput | select-object severity,reason,keyword,modified,unc,content |  Out-GridView -Title "FullView" -PassThru
 	}
 	$countpassthruobjec = $passthruobjec | Measure-Object -Line -Property unc
 	if ($countpassthruobjec.lines -ge 1) {
@@ -218,34 +218,68 @@ function explorerpp($objects){
 
 # Function to export as CSV
 function exportcsv($object ,$name){
-	write-host "[*] Store: $($outputname)_files_$($name).csv"
-	$object| Export-Csv -Path "$($outputname)_files_$($name).csv" -NoTypeInformation
+	write-host "[*] Store: $($outputname)_loot_$($name).csv"
+	$object | select-object severity,reason,keyword,modified,unc,content | Export-Csv -Path "$($outputname)_loot_$($name).csv" -NoTypeInformation
 }
 
 # Function to export as TXT
 function exporttxt($object ,$name){
-	write-host "[*] Store: $($outputname)_files_$($name).txt"
-	$object | Format-Table -AutoSize | Out-String -Width 10000 | Out-File -FilePath "$($outputname)_files_$($name).txt"
+	write-host "[*] Store: $($outputname)_loot_$($name).txt"
+	$object | Format-Table severity,reason,keyword,modified,unc,content -AutoSize | Out-String -Width 10000 | Out-File -FilePath "$($outputname)_loot_$($name).txt"
 }
 
 # Function to export as JSON
 function exportjson($object ,$name){
-	write-host "[*] Store: $($outputname)_files_$($name).json"
-	$object | ConvertTo-Json -depth 100  | Out-File -FilePath "$($outputname)_files_$($name).json"
+	write-host "[*] Store: $($outputname)_loot_$($name).json"
+	$object | select-object severity,reason,keyword,modified,unc,content | ConvertTo-Json -depth 100  | Out-File -FilePath "$($outputname)_loot_$($name).json"
 }
 
 # Function to export as HTML
 function exporthtml($object ,$name){
 $Header = @"
 <style>
-TABLE {border-width: 1px; border-style: solid; border-color: black; border-collapse: collapse;}
-TH {border-width: 1px; padding: 3px; border-style: solid; border-color: black; background-color: #6495ED;}
-TD {border-width: 1px; padding: 3px; border-style: solid; border-color: black;}
+table {
+		font-size: 14px;
+		border: 0px; 
+		font-family: Arial, Helvetica, sans-serif;
+	} 
+
+    td {
+		padding: 4px;
+		margin: 0px;
+		border: 0;
+	}
+	
+    th {
+        background: #395870;
+        background: linear-gradient(#49708f, #293f50);
+        color: #fff;
+        font-size: 11px;
+        padding: 5px 7px;
+        vertical-align: middle;
+        position: sticky;
+		top: 0;
+	}
+
+    tbody tr:nth-child(even) {
+        background: #f0f0f2;
+    }
+
+    tbody tr:hover td {
+        background-color: lightblue;
+    }
+
 </style>
 
 "@
-	write-host "[*] Store: $($outputname)_files_$($name).html"
-	$object | ConvertTo-Html -Title "Snaffler $outputname" -Head $Header  | Out-File -FilePath "$($outputname)_files_$($name).html"
+	write-host "[*] Store: $($outputname)_loot_$($name).html"
+	$htmlOutput = $object | ConvertTo-Html -Title "Snaffler $outputname" -Head $Header
+
+	#Replace placeholder strings
+	$htmlOutput = $htmlOutput -replace '@@o@@','<'
+	$htmlOutput = $htmlOutput -replace '@@c@@','>'
+	$htmlOutput = $htmlOutput -replace '@@a@@','&'
+	$htmlOutput | Out-File -FilePath "$($outputname)_loot_$($name).html"
 }
 
 
@@ -321,6 +355,9 @@ $files = foreach ($line in $data) {
 			keyword = $line.6
 			modified = $line.8
 			unc = $line.9
+			#Since HTML chars are encoded to entities, special strings are used and replaced later
+			open = "@@o@@a href=$(Split-Path -Parent $($line.9))\ @@c@@@@o@@span style='font-size:100px;'@@c@@@@a@@#9929;@@o@@/span@@c@@"
+			download = "@@o@@a href=$($line.9) download@@c@@@@o@@span style='font-size:100px;'@@c@@@@a@@#9930;@@o@@/span@@c@@"
 			content = $line.10
 		}
     }

@@ -24,7 +24,7 @@ The different file output options are:
 - `-outformat all` Write txt, csv, html and json
 - `-outformat txt` Write txt
 - `-outformat csv` Write csv
-- `-outformat html` Write html
+- `-outformat html` Write html (includes clickable links)
 - `-outformat json` Write json
 
 Those files can be splitted regarding the finding severity (black, red, yellow, green) using the `-split` switch.
