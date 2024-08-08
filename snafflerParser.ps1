@@ -325,7 +325,7 @@ if (!(Test-Path -Path $in -PathType Leaf)) {
 		$outputname = (Get-Item $in).BaseName
 
 		$baseInfo = [PsCustomObject]@{
-			InputFile = Split-Path $in -Leaf
+			Snaffler_File = Split-Path $in -Leaf
 			SHA265 = $(Get-FileHash $in).Hash
 		}
 
