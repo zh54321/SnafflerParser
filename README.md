@@ -9,6 +9,11 @@ This script parse the Snaffler outputfile (TSV format required) and:
 - Generate a list of all shares Snaffler was able to access.
 
 # Show Case
+Parsing output file:
+![Console Output](/images/parser_console.png "Console Output")
+
+HTML output:
+![HTML Output](/images/HTML_output.png "HTML Output")
 
 # Preconditions and Usage
 Snaffler must be executed with the `-y` switch in order to create an output file in the TSV format.
