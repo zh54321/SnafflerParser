@@ -20,7 +20,7 @@
 		- modified: File modified date (default)
 		- keyword: Snaffler keyword
 		- unc: File UNC Path
-	- reason: Reason why Snaffler flagged the file
+	- rule: Snaffler rule name
 	.Parameter split
 	Will create splitted (by severity black, red, yellow, green) export files
 	.Parameter gridview
@@ -66,7 +66,7 @@
 Param (
 	[String[]]
 	$in = 'snafflerout.txt',
-	[ValidateSet("modified", "keyword", "reason", "unc")]
+	[ValidateSet("modified", "keyword", "rule", "unc")]
 	[String[]]
 	$sort = "modified",
 	[ValidateSet("all", "csv", "txt", "json","html")]
@@ -103,9 +103,9 @@ function gridview($action){
 
 	} elseif ($action -eq "start") {
 		write-host "[*] Writing Gridview output file for further use"
-		$fulloutput | select-object severity,reason,keyword,modified,extension,unc,content | Export-Csv -Path "$($outputname)_loot_gridview.csv" -NoTypeInformation
+		$fulloutput | select-object severity,rule,keyword,modified,extension,unc,content | Export-Csv -Path "$($outputname)_loot_gridview.csv" -NoTypeInformation
 		write-host "[*] Starting Gridview (opens in background)"
-		$passthruobjec = $fulloutput | select-object severity,reason,keyword,modified,extension,unc,content |  Out-GridView -Title "FullView" -PassThru
+		$passthruobjec = $fulloutput | select-object severity,rule,keyword,modified,extension,unc,content |  Out-GridView -Title "FullView" -PassThru
 	}
 	$countpassthruobjec = $passthruobjec | Measure-Object -Line -Property unc
 	if ($countpassthruobjec.lines -ge 1) {
@@ -219,19 +219,19 @@ function explorerpp($objects){
 # Function to export as CSV
 function exportcsv($object ,$name){
 	write-host "[*] Store: $($outputname)_loot_$($name).csv"
-	$object | select-object severity,reason,keyword,modified,extension,unc,content | Export-Csv -Path "$($outputname)_loot_$($name).csv" -NoTypeInformation
+	$object | select-object severity,rule,keyword,modified,extension,unc,content | Export-Csv -Path "$($outputname)_loot_$($name).csv" -NoTypeInformation
 }
 
 # Function to export as TXT
 function exporttxt($object ,$name){
 	write-host "[*] Store: $($outputname)_loot_$($name).txt"
-	$object | Format-Table severity,reason,keyword,modified,extension,unc,content -AutoSize | Out-String -Width 10000 | Out-File -FilePath "$($outputname)_loot_$($name).txt"
+	$object | Format-Table severity,rule,keyword,modified,extension,unc,content -AutoSize | Out-String -Width 10000 | Out-File -FilePath "$($outputname)_loot_$($name).txt"
 }
 
 # Function to export as JSON
 function exportjson($object ,$name){
 	write-host "[*] Store: $($outputname)_loot_$($name).json"
-	$object | select-object severity,reason,keyword,modified,extension,unc,content | ConvertTo-Json -depth 100  | Out-File -FilePath "$($outputname)_loot_$($name).json"
+	$object | select-object severity,rule,keyword,modified,extension,unc,content | ConvertTo-Json -depth 100  | Out-File -FilePath "$($outputname)_loot_$($name).json"
 }
 
 # Function to export as HTML
@@ -279,7 +279,8 @@ $Header = @"
 </style>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    // Get all table elements in the document
+
+    // ========================= TABLE SORTING =========================
     var tables = document.getElementsByTagName("table");
     
     if (tables.length > 1) {
@@ -365,7 +366,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Color according to file classification
+    // ========================= SEVERITY COLORS =========================
     document.querySelectorAll('table td:first-of-type').forEach(td => {
         switch (td.textContent.trim()) {
             case 'Black':
@@ -417,6 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
 				}
 			});
 		});
+    
 	});
 
 	// Set the default filter to 'all'
@@ -425,8 +427,53 @@ document.addEventListener('DOMContentLoaded', () => {
 			button.click(); // Trigger the click event to show all rows
 		}
 	});
-});
 
+    // ========================= MARK SNAFFLER CONTENT =========================
+        const rows2 = document.querySelectorAll('table tbody tr');
+
+    // Find the header row to determine the index of the 'Keyword' and 'Content' columns
+    const headerCells = document.querySelectorAll('table thead th, table tbody tr:first-child th');
+    
+    let keywordIndex = -1;
+    let contentIndex = -1;
+
+    headerCells.forEach((headerCell, index) => {
+        const headerText = headerCell.textContent.trim().toLowerCase();
+        if (headerText === 'keyword') {
+            keywordIndex = index;
+        }
+        if (headerText === 'content') {
+            contentIndex = index;
+        }
+    });
+
+    // If both columns are found
+    if (keywordIndex !== -1 && contentIndex !== -1) {
+        // Iterate through each row (excluding the header)
+        rows2.forEach((row2, rowIndex) => {
+            if (rowIndex > 0) { // Skip the header row if it's in tbody
+                const cells = row2.querySelectorAll('td');
+                const keywordCell = cells[keywordIndex];
+                const contentCell = cells[contentIndex];
+
+                if (keywordCell && contentCell) {
+                    // Get the text from the keyword and content cells
+                    const keyword = keywordCell.textContent.trim();
+                    let content = contentCell.innerHTML;
+
+                    // Create a regular expression to find the keyword in the content (case-insensitive)
+                    const regex = new RegExp(``(`${keyword})``, 'gi');
+
+                    // Replace the keyword with highlighted keyword in red
+                    content = content.replace(regex, '<span style="color: red;">`$1</span>');
+
+                    // Update the content cell with the new HTML
+                    contentCell.innerHTML = content;
+                }
+            }
+        });
+    }
+});
 
 </script>
 "@
@@ -540,7 +587,7 @@ $files = foreach ($line in $data) {
     if($line.Typ -eq "[File]") {
 		[PsCustomObject]@{
 			severity = $line.1
-			reason = $line.2
+			rule = $line.2
 			keyword = $line.6
 			modified = $line.8
 			unc = $line.9

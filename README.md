@@ -37,7 +37,7 @@ The output will always be sorted regarding the severity than it can be sorted by
 - `-sort modified` File modified date (default)
 - `-sort keyword` Snaffler keyword
 - `-sort unc` File UNC Path
-- `-sort reason` Reason why Snaffler flagged the file
+- `-sort rule` Snaffler rule name
 
 ## Explorer++ integration
 
