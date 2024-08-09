@@ -103,9 +103,9 @@ function gridview($action){
 
 	} elseif ($action -eq "start") {
 		write-host "[*] Writing Gridview output file for further use"
-		$fulloutput | select-object severity,reason,keyword,modified,unc,content | Export-Csv -Path "$($outputname)_loot_gridview.csv" -NoTypeInformation
+		$fulloutput | select-object severity,reason,keyword,modified,extension,unc,content | Export-Csv -Path "$($outputname)_loot_gridview.csv" -NoTypeInformation
 		write-host "[*] Starting Gridview (opens in background)"
-		$passthruobjec = $fulloutput | select-object severity,reason,keyword,modified,unc,content |  Out-GridView -Title "FullView" -PassThru
+		$passthruobjec = $fulloutput | select-object severity,reason,keyword,modified,extension,unc,content |  Out-GridView -Title "FullView" -PassThru
 	}
 	$countpassthruobjec = $passthruobjec | Measure-Object -Line -Property unc
 	if ($countpassthruobjec.lines -ge 1) {
@@ -219,19 +219,19 @@ function explorerpp($objects){
 # Function to export as CSV
 function exportcsv($object ,$name){
 	write-host "[*] Store: $($outputname)_loot_$($name).csv"
-	$object | select-object severity,reason,keyword,modified,unc,content | Export-Csv -Path "$($outputname)_loot_$($name).csv" -NoTypeInformation
+	$object | select-object severity,reason,keyword,modified,extension,unc,content | Export-Csv -Path "$($outputname)_loot_$($name).csv" -NoTypeInformation
 }
 
 # Function to export as TXT
 function exporttxt($object ,$name){
 	write-host "[*] Store: $($outputname)_loot_$($name).txt"
-	$object | Format-Table severity,reason,keyword,modified,unc,content -AutoSize | Out-String -Width 10000 | Out-File -FilePath "$($outputname)_loot_$($name).txt"
+	$object | Format-Table severity,reason,keyword,modified,extension,unc,content -AutoSize | Out-String -Width 10000 | Out-File -FilePath "$($outputname)_loot_$($name).txt"
 }
 
 # Function to export as JSON
 function exportjson($object ,$name){
 	write-host "[*] Store: $($outputname)_loot_$($name).json"
-	$object | select-object severity,reason,keyword,modified,unc,content | ConvertTo-Json -depth 100  | Out-File -FilePath "$($outputname)_loot_$($name).json"
+	$object | select-object severity,reason,keyword,modified,extension,unc,content | ConvertTo-Json -depth 100  | Out-File -FilePath "$($outputname)_loot_$($name).json"
 }
 
 # Function to export as HTML
@@ -265,6 +265,7 @@ $Header = @"
         vertical-align: middle;
         position: sticky;
 		top: 0;
+		cursor: pointer;
 	}
 
     tbody tr:nth-child(even) {
@@ -276,12 +277,174 @@ $Header = @"
     }
 
 </style>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Get all table elements in the document
+    var tables = document.getElementsByTagName("table");
+    
+    if (tables.length > 1) {
+        var table = tables[1]; // Select the second table
+        
+        var headers = table.getElementsByTagName("th");
 
+        if (headers.length > 0) { // Check if the second table has headers
+            // Loop through the headers and add the onclick event
+            for (let i = 0; i < headers.length; i++) {
+                headers[i].addEventListener("click", function() {
+                    sortTable(table, i);
+                });
+            }
+        }
+    }
+
+    function sortTable(table, columnIndex) {
+        var rows = table.rows;
+        var switching = true;
+        var shouldSwitch, i;
+        var direction = "asc";
+        var switchCount = 0;
+
+        // Define custom order for the first column
+        var customOrder = ["Black", "Red", "Yellow", "Green"];
+
+        while (switching) {
+            switching = false;
+            var rowsArray = Array.prototype.slice.call(rows, 1); // Skip the header row
+
+            for (i = 0; i < rowsArray.length - 1; i++) {
+                shouldSwitch = false;
+                var x = rowsArray[i].getElementsByTagName("TD")[columnIndex];
+                var y = rowsArray[i + 1].getElementsByTagName("TD")[columnIndex];
+                
+                if (columnIndex === 0) {
+                    // Custom sorting logic for the first column
+                    var xIndex = customOrder.indexOf(x.innerHTML.trim());
+                    var yIndex = customOrder.indexOf(y.innerHTML.trim());
+                    
+                    if (direction === "asc") {
+                        if (xIndex > yIndex) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (direction === "desc") {
+                        if (xIndex < yIndex) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                } else {
+                    // Alphabetical sorting for other columns
+                    if (direction === "asc") {
+                        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (direction === "desc") {
+                        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (shouldSwitch) {
+                rowsArray[i].parentNode.insertBefore(rowsArray[i + 1], rowsArray[i]);
+                switching = true;
+                switchCount++;
+            } else {
+                if (switchCount === 0 && direction === "asc") {
+                    direction = "desc";
+                    switching = true;
+                }
+            }
+        }
+    }
+});
+
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    // Color according to file classification
+    document.querySelectorAll('table td:first-of-type').forEach(td => {
+        switch (td.textContent.trim()) {
+            case 'Black':
+                td.style.backgroundColor = '#333';
+                td.style.color = 'white';
+                break;
+            case 'Red':
+                td.style.backgroundColor = '#d9534f';
+                td.style.color = 'white';
+                break;
+            case 'Yellow':
+                td.style.backgroundColor = '#CFAD01';
+                td.style.color = 'white';
+                break;
+            case 'Green':
+                td.style.backgroundColor = '#79C55B';
+                td.style.color = 'white';
+                break;
+            default:
+                td.style.backgroundColor = 'transparent';
+                td.style.color = 'black';
+        }
+    });
+	
+	// Filter section
+	const buttons = document.querySelectorAll('.filter-buttons button');
+	const tables = document.querySelectorAll('table');
+	
+	if (tables.length < 2) {
+		console.error('There are less than 2 tables in the document.');
+		return;
+	}
+
+	const secondTable = tables[1]; // Get the second table
+	const rows = secondTable.querySelectorAll('tr');
+
+	buttons.forEach(button => {
+		button.addEventListener('click', () => {
+			const filter = button.getAttribute('data-filter');
+			rows.forEach(row => {
+				const firstCell = row.querySelector('td:first-of-type');
+				if (firstCell) {
+					const cellText = firstCell.textContent.trim();
+					if (filter === 'all' || cellText === filter) {
+						row.style.display = '';
+					} else {
+						row.style.display = 'none';
+					}
+				}
+			});
+		});
+	});
+
+	// Set the default filter to 'all'
+	buttons.forEach(button => {
+		if (button.getAttribute('data-filter') === 'all') {
+			button.click(); // Trigger the click event to show all rows
+		}
+	});
+});
+
+
+</script>
+"@
+
+$titleAndFilter = @"
+<h2>Files</h2>
+<div class="filter-buttons">
+    <button data-filter="all">All</button>
+    <button data-filter="Black">Black</button>
+    <button data-filter="Red">Red</button>
+    <button data-filter="Yellow">Yellow</button>
+    <button data-filter="Green">Green</button>
+</div><br>
 "@
 
 	write-host "[*] Store: $($outputname)_loot_$($name).html"
 	$inputInfo = $baseInfo | ConvertTo-Html -As List -Fragment -PreContent "<h2>Input Information</h2>"
-	$mainTable = $object | ConvertTo-Html -Fragment -PreContent "<h2>Files</h2>"
+	$mainTable = $object | ConvertTo-Html -Fragment -PreContent $titleAndFilter
 	$htmlOutput = ConvertTo-Html -Head $Header -Body "$inputInfo $mainTable"
 
 	#Replace placeholder strings
@@ -381,9 +544,10 @@ $files = foreach ($line in $data) {
 			keyword = $line.6
 			modified = $line.8
 			unc = $line.9
+			extension = [System.IO.Path]::GetExtension($($line.9))
 			#Since HTML chars are encoded to entities, special strings are used and replaced later
-			open = "@@o@@a href=$(Split-Path -Parent $($line.9))\ @@c@@@@o@@span style='font-size:100px;'@@c@@@@a@@#9929;@@o@@/span@@c@@"
-			download = "@@o@@a href=$($line.9) download@@c@@@@o@@span style='font-size:100px;'@@c@@@@a@@#9930;@@o@@/span@@c@@"
+			open = "@@o@@a href=$(Split-Path -Parent $($line.9))\ @@c@@@@o@@span style='font-size:100px;'@@c@@@@a@@#x1F4C2;@@o@@/span@@c@@"
+			save = "@@o@@a href=$($line.9) download@@c@@@@o@@span style='font-size:100px;'@@c@@@@a@@#x1F4BE;@@o@@/span@@c@@"
 			content = $line.10
 		}
     }
