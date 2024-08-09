@@ -8,19 +8,19 @@ This script parse the Snaffler outputfile (TSV format required) and:
 - Can export all the shares to the Explorer++ config files as bookmarks.
 - Generate a list of all shares Snaffler was able to access.
 
-# ShowCase
+# Show Case
 
-# Preconditions and usage
+# Preconditions and Usage
 Snaffler must be executed with the `-y` switch in order to create an output file in the TSV format.
 
 Example:
 `.\Snaffler.exe -o snafflerout.txt -s -y`
 
-## Simple parse
+## Simple Parse
 Simple parse the file my_snaffler_output.txt and write output with default sorting (severity, date modified) and default output files (TXT, CSV, HTML).
 `.\snafflerparser.ps1 -in my_snaffler_output.txt`
 
-## Output options
+## Output Options
 The different file output options are:
 - `-outformat all` Write txt, csv, html and json
 - `-outformat txt` Write txt
@@ -39,7 +39,7 @@ The output will always be sorted regarding the severity than it can be sorted by
 - `-sort unc` File UNC Path
 - `-sort rule` Snaffler rule name
 
-## Explorer++ integration
+## Explorer++ Integration
 
 Explorer++ is an alternative file explorer on windows.
 
