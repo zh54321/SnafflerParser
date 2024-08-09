@@ -42,11 +42,15 @@ The output will always be sorted regarding the severity than it can be sorted by
 ## Explorer++ integration
 
 Explorer++ is an alternative file explorer on windows.
-https://github.com/derceg/explorerplusplus
+
 
 The great thing is that unlike the Windows Explorer it can be executed in another user's context including the `/netonly` switch. This is useful when performing a pentest from a dedicated, non-domain joined pentest notebook or VM.
 
-Therefore, this scripts can export all accessible shares as bookmarks to the Explorer++ config XML: `.\snafflerParser.ps1 -in out_azure1.txt -pte`
+Donwload Explorer++ https://github.com/derceg/explorerplusplus to the same folder and configure the portable mode:
+![Configure Explorer++ in portable mode](/images/explorerpp_settings.png "Configure portable mode")
+This will create an config.xml in the same folder.
+
+Parse the Snaffler file using the `-pte` switch to export all accessible shares as bookmarks to the Explorer++ config XML: `.\snafflerParser.ps1 -in Snaffler_output.txt -pte`
 
 Explorer++ can then be executed as the user which have access to the shares: `runas /user:domain\user /netonly Explorerpp.exe`
 This allows easy access to the shares without authenticate for every share.
