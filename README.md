@@ -49,6 +49,7 @@ The great thing is that unlike the Windows Explorer it can be executed in anothe
 Donwload Explorer++ https://github.com/derceg/explorerplusplus to the same folder and configure the portable mode:
 
 ![Configure Explorer++ in portable mode](/images/explorerpp_settings.png "Configure portable mode")
+
 This will create an config.xml in the same folder.
 
 Parse the Snaffler file using the `-pte` switch to export all accessible shares as bookmarks to the Explorer++ config XML: `.\snafflerParser.ps1 -in Snaffler_output.txt -pte`
