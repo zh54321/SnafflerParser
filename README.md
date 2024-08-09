@@ -10,6 +10,7 @@ This script parse the Snaffler outputfile (TSV format required) and:
 
 # Show Case
 Parsing output file:
+
 ![Console Output](/images/parser_console.png "Console Output")
 
 HTML output:
@@ -60,6 +61,8 @@ This will create an config.xml in the same folder.
 Parse the Snaffler file using the `-pte` switch to export all accessible shares as bookmarks to the Explorer++ config XML: `.\snafflerParser.ps1 -in Snaffler_output.txt -pte`
 
 Explorer++ can then be executed as the user which have access to the shares: `runas /user:domain\user /netonly Explorerpp.exe`
-This allows easy access to the shares without authenticate for every share.
+This allows easy access to the shares without authenticate for every share via the bookmark bar:
+
+![Explorer++ Bookmarks](/images/explorerpp_bookmarks.png "Explorer++ Bookmarks")
 
 
