@@ -81,7 +81,7 @@ Param (
 	[String[]]
 	$gridin = 'snafflerout.txt_loot_gridview.csv',
 	[String[]]
-	$exlorerpp = '.\Explorerpp.exe',
+	$exlorerpp = '.\Explorer++.exe',
 	[switch]
 	$pte,
 	[switch]
@@ -508,7 +508,7 @@ $titleAndFilter = @"
 $banner = @"
  ____               __  __ _             ____                          
 / ___| _ __   __ _ / _|/ _| | ___ _ __  |  _ \ __ _ _ __ ___  ___ _ __ 
-\___ \|  _ \ / _  | |_| |_| |/ _ \ '__| | |_) / _` | '__/ __|/ _ \ '__|
+\___ \|  _ \ / _  | |_| |_| |/ _ \ '__| | |_) / _  | '__/ __|/ _ \ '__|
  ___) | | | | (_| |  _|  _| |  __/ |    |  __/ (_| | |  \__ \  __/ |   
 |____/|_| |_|\__,_|_| |_| |_|\___|_|    |_|   \__,_|_|  |___/\___|_|   
 																	   																								
@@ -582,11 +582,11 @@ $shares = $shares | Sort-Object -Property unc -Unique
 # Check share count and write to file
 $sharescount = $shares | Measure-Object -Line -Property unc
 if ($sharescount.lines -ge 1) {
-	write-host "[+] Shares identfied: $($sharescount.lines)"
+	write-host "[+] Shares identified: $($sharescount.lines)"
 	write-host "[*] Write share output file"
 	$shares | Format-Table -AutoSize | Out-File -FilePath "$($outputname)_shares.txt"
 } else {
-	write-host "[!] Shares identfied: $($sharescount.lines)"
+	write-host "[!] Shares identified: 0"
 	write-host "[?] Was Snaffler executed with parameter -y ?"
 }
 
@@ -640,10 +640,10 @@ if ($greens -ne $null) {$greenscount = $greens | Measure-Object -Line -Property 
 $filesum = $blackscount + $redscount + $yellowscount + $greenscount
 if ($filesum -ge 1) {
 	write-host "[+] Files total: $filesum "
-	write-host "[+] Files with severity black: $blackscount"
-	write-host "[+] Files with severity red: $redscount"
-	write-host "[+] Files with severity yellow: $yellowscount"
-	write-host "[+] Files with severity green: $greenscount"
+	write-host "[+] Files with severity BLACK: $blackscount"
+	write-host "[+] Files with severity RED: $redscount"
+	write-host "[+] Files with severity YELLOW: $yellowscount"
+	write-host "[+] Files with severity GREEN: $greenscount"
 
 	#Write outputs depening on desired format
 	if ($outformat -eq "all"){
