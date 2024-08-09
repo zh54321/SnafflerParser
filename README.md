@@ -47,6 +47,7 @@ Explorer++ is an alternative file explorer on windows.
 The great thing is that unlike the Windows Explorer it can be executed in another user's context including the `/netonly` switch. This is useful when performing a pentest from a dedicated, non-domain joined pentest notebook or VM.
 
 Donwload Explorer++ https://github.com/derceg/explorerplusplus to the same folder and configure the portable mode:
+
 ![Configure Explorer++ in portable mode](/images/explorerpp_settings.png "Configure portable mode")
 This will create an config.xml in the same folder.
 
