@@ -4,7 +4,7 @@ Especially in large environments, the Snaffler output gets very large and time-c
 This script parse the Snaffler output file (TSV format required) and:
 - Beautify it: Proper tables and different output formats like TXT, CSV, HTML, JSON or PS Gridview.
 - The HTML output file:
-    - Supports basic sorting, filtering (severity & extension)
+    - Supports basic sorting and filtering (severity & extension)
     - Highlights the finding keyword in the file preview text
     - Contains direct links to the parent folder of the file and a download link for the file itself.
     - Contains basing information about the Snaffler job.
@@ -19,6 +19,9 @@ Parsing output file:
 
 HTML output:
 ![HTML Output](/images/HTML_output.png "HTML Output")
+
+TXT output:
+![TXT Output](/images/TXT_output.png "TXT Output")
 
 # Preconditions and Usage
 Snaffler must be executed with the `-y` switch in order to create an output file in the TSV format.
