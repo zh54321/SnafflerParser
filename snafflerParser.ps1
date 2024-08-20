@@ -35,6 +35,8 @@
 	Explorer++ must be configured to be in Portable mode (settings saved in xml file) and only one instance is allowed.
 	.Parameter snaffel
 	Run Snaffler and execute parser with default settings.
+	.Parameter unescape
+	Un escape the preview content for better redability (Expiremental).
 	.Example
 	.\snafflerparser.ps1 
 	(will try to load snafflerout.txt and output in TXT format)
@@ -86,6 +88,8 @@ Param (
 	$pte,
 	[switch]
 	$snaffel,
+	[switch]
+	$unescape,
 	[switch]
 	$help
 )
@@ -656,6 +660,9 @@ $titleAndFilter = @"
 	$htmlOutput = $htmlOutput -replace '@@o@@','<'
 	$htmlOutput = $htmlOutput -replace '@@c@@','>'
 	$htmlOutput = $htmlOutput -replace '@@a@@','&'
+	
+
+	
 	$htmlOutput | Out-File -FilePath "$($outputname)_loot_$($name).html"
 }
 
@@ -709,7 +716,7 @@ if (!(Test-Path -Path $in -PathType Leaf)) {
 
 		$firstLine = Get-Content $in -TotalCount 1
 
-		# Define the regular expression pattern to extract Computername, USer and timestamp
+		# Define the regular expression pattern to extract Computername, User and timestamp
 		$pattern = '\[(?<machine>.*?)\\(?<user>.*?)@.*?\]\s+(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}Z)'
 
 
@@ -752,8 +759,26 @@ if ($sharescount.lines -ge 1) {
 # Processing files
 write-host "[*] Processing files"
 
+
 $files = foreach ($line in $data) {
     if($line.Typ -eq "[File]" -and $line.9 -ne $Null) {
+		git rb
+		$content = $line.10
+		
+		#Unescape the content (experimental)
+		if ($unescape) {
+			try {
+				# Attempt to unescape the content
+				$content = [System.Text.RegularExpressions.Regex]::Unescape($content)
+			} catch {
+				# Suppress the error message
+				$content = $content
+			}
+			#Format HTML
+			$content = $content -replace ([regex]::Escape("`t")),'@@a@@emsp;'
+			$content = $content -replace ([regex]::Escape("`r`n")),'@@o@@br@@c@@'
+		}
+
 		[PsCustomObject]@{
 			severity = $line.1
 			rule = $line.2
@@ -764,7 +789,7 @@ $files = foreach ($line in $data) {
 			#Since HTML chars are encoded to entities, special strings are used and replaced later
 			open = "@@o@@a href=$(Split-Path -Parent $($line.9))\ @@c@@@@o@@span style='font-size:100px;'@@c@@@@a@@#x1F4C2;@@o@@/span@@c@@"
 			save = "@@o@@a href=$($line.9) download@@c@@@@o@@span style='font-size:100px;'@@c@@@@a@@#x1F4BE;@@o@@/span@@c@@"
-			content = $line.10
+			content = $content			
 		}
     }
 }
