@@ -1169,6 +1169,16 @@ $files = foreach ($line in $data) {
 			$content = $content -replace ([regex]::Escape("`r`n")),'@@o@@br@@c@@'
 		}
 
+		#Better handling of control chars in UNC. Avoid GetExtension to throw
+		$unc = [string]$line.9
+        $uncSafe = $unc -replace '[\x00-\x1F]', ''
+        if ($IsWindows -or $PSVersionTable.PSVersion.Major -le 5) {
+            $uncSafe = $uncSafe -replace '[<>:"|?*]', ''
+        }
+        $ext = ''
+        try { $ext = [System.IO.Path]::GetExtension($uncSafe) } catch { $ext = '' }
+
+
 		[PsCustomObject]@{
 			check = "@@o@@input type=checkbox value=HighValue@@c@@"
 			done = "@@o@@input type=checkbox value=done@@c@@"
@@ -1176,8 +1186,8 @@ $files = foreach ($line in $data) {
 			rule = $line.2
 			keyword = $line.6
 			modified = $line.8
-			unc = $line.9
-			extension = [System.IO.Path]::GetExtension($($line.9))
+			unc = $unc
+			extension = $ext
 			#Since HTML chars are encoded to entities, special strings are used and replaced later
 			open = "@@o@@a target=_blank href=file://$($(Split-Path -Parent $($line.9)).Replace(' ','%20'))\ @@c@@@@o@@span class=icon @@c@@@@a@@#x1F4C2;@@o@@/span@@c@@"
 			save = "@@o@@a target=_blank href=file://$($($line.9).Replace(' ','%20')) download@@c@@@@o@@span class=icon @@c@@@@a@@#x1F4BE;@@o@@/span@@c@@"
@@ -1187,32 +1197,39 @@ $files = foreach ($line in $data) {
 }
 
 
-## Ugly hack to default to descending sort, maybe fix
-if ($sort -eq "modified") {
-
-	$blacks = $files | where-object severity -EQ "Black" | sort-object -Property $sort -Descending
-	$reds = $files | where-object severity -EQ "Red" | sort-object -Property $sort -Descending
-	$yellows = $files | where-object severity -EQ "Yellow" | sort-object -Property $sort -Descending
-	$greens = $files | where-object severity -EQ "Green" | sort-object -Property $sort -Descending
-	$fulloutput = ForEach ($Result in "Black", "Red", "Yellow", "Green") {
-		$files | Where-Object {$_.Severity -eq $Result } | sort-object -Property $sort -Descending
-	}
-
-} else {
-	$blacks = $files | where-object severity -EQ "Black" | sort-object -Property $sort
-	$reds = $files | where-object severity -EQ "Red" | sort-object -Property $sort
-	$yellows = $files | where-object severity -EQ "Yellow" | sort-object -Property $sort
-	$greens = $files | where-object severity -EQ "Green" | sort-object -Property $sort
-	$fulloutput = ForEach ($Result in "Black", "Red", "Yellow", "Green") {
-		$files | Where-Object {$_.Severity -eq $Result } | sort-object -Property $sort
-	}
+# Define fixed severity order
+$severityRank = @{
+    Black  = 0
+    Red    = 1
+    Yellow = 2
+    Green  = 3
 }
 
-# Check file count for error detection and output
-if ($blacks -ne $null) {$blackscount = $blacks | Measure-Object -Line -Property unc | select-object -ExpandProperty Lines} else {$blackscount = 0}
-if ($reds -ne $null) {$redscount  = $reds | Measure-Object -Line -Property unc | select-object -ExpandProperty Lines} else {$redscount = 0}
-if ($yellows -ne $null) {$yellowscount = $yellows | Measure-Object -Line -Property unc | select-object -ExpandProperty Lines} else {$yellowscount = 0}
-if ($greens -ne $null) {$greenscount = $greens | Measure-Object -Line -Property unc | select-object -ExpandProperty Lines} else {$greenscount = 0}
+# Whether to sort descending
+$sortDescending = ($sort -eq 'modified')
+
+# Sort once:
+# 1) by severity rank so Black/Red/Yellow/Green always stay grouped + ordered
+# 2) then by chosen $sort column (descending only for modified)
+$fulloutput = $files | Sort-Object `
+    @{ Expression = { $severityRank[$_.severity] } ; Ascending = $true } ,
+    @{ Expression = { $_.$sort } ; Descending = $sortDescending }
+
+# Group once into a hashtable: keys = "Black"/"Red"/...
+$bySeverity = $fulloutput | Group-Object -Property severity -AsHashTable -AsString
+
+# Pull groups out (always define them as arrays, even if empty)
+$blacks  = @($bySeverity['Black'])
+$reds    = @($bySeverity['Red'])
+$yellows = @($bySeverity['Yellow'])
+$greens  = @($bySeverity['Green'])
+
+# Counts
+$blackscount  = $blacks.Count
+$redscount    = $reds.Count
+$yellowscount = $yellows.Count
+$greenscount  = $greens.Count
+
 
 
 $filesum = $blackscount + $redscount + $yellowscount + $greenscount
