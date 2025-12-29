@@ -68,13 +68,13 @@
 	https://github.com/zh54321/snaffler_parser
 #>
 Param (
-	[String[]]
+	[String]
 	$in = 'snafflerout.txt',
 	[ValidateSet("modified", "keyword", "rule", "unc")]
-	[String[]]
+	[String]
 	$sort = "modified",
-	[ValidateSet("all", "csv", "txt", "json","html")]
-	[String[]]
+	[ValidateSet("all", "csv", "txt", "json","html","default")]
+	[String]
 	$outformat = "default",
 	[switch]
 	$gridview,
@@ -82,9 +82,9 @@ Param (
 	$gridviewload,
 	[switch]
 	$split,
-	[String[]]
+	[String]
 	$gridin = 'snafflerout.txt_loot_gridview.csv',
-	[String[]]
+	[String]
 	$exlorerpp = '.\Explorer++.exe',
 	[switch]
 	$pte,
