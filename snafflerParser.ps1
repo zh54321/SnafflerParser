@@ -129,7 +129,7 @@ function gridview($action){
 			foreach ($path in $passthruobjec.unc) {
 				$pathtoopen = (Split-Path -Path $path -Parent)
 				# Danger danger Invoke-Expression
-				Invoke-Expression "$exlorerpp $pathtoopen"
+				& $exlorerpp $pathtoopen
 				Start-Sleep -Milliseconds 500
 			}
 		}
@@ -1098,7 +1098,7 @@ if (!(Test-Path -Path $in -PathType Leaf)) {
 	if ($FileSizeRound -ge 0.3) {
 		write-host "[+] Input file is $FileSizeRound KB"
 		write-host "[*] Importing data from file"
-		$data = Import-Csv -Delimiter "`t" -Path $in -Header user, timestamp , typ, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+		$data = Import-Csv -Delimiter "`t" -Path $in -Header user,timestamp,typ,1,2,3,4,5,6,7,8,9,10
 		$outputname = (Get-Item $in).BaseName
 
 		$baseInfo = [PsCustomObject]@{
@@ -1185,6 +1185,7 @@ $files = foreach ($line in $data) {
 		}
     }
 }
+
 
 ## Ugly hack to default to descending sort, maybe fix
 if ($sort -eq "modified") {
