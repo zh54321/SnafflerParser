@@ -1103,7 +1103,7 @@ if (!(Test-Path -Path $in -PathType Leaf)) {
 
 		$baseInfo = [PsCustomObject]@{
 			Snaffler_File = Split-Path $in -Leaf
-			SHA265 = $(Get-FileHash $in).Hash
+			SHA256 = $(Get-FileHash $in).Hash
 		}
 
 		$firstLine = Get-Content $in -TotalCount 1
