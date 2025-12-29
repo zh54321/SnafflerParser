@@ -98,12 +98,25 @@ Param (
 	$LightMode = $false
 )
 
+# Resolve input file path
+if ([System.IO.Path]::IsPathRooted($in)) {
+    # Absolute path provided
+    $inPath = $in
+} else {
+    # Relative path or filename only → current directory
+    $inPath = Join-Path -Path (Get-Location) -ChildPath $in
+}
+
+# Normalize (removes .\, ..\, etc.)
+$inPath = [System.IO.Path]::GetFullPath($inPath)
+
+
 # Function section-----------------------------------------------------------------------------------
 
 function gridview($action){
 	if ($action -eq "load") {
 		write-host "[*] Loading stored Gridview file: $($gridin)"
-		if (!(Test-Path -Path $in -PathType Leaf)) {
+		if (!(Test-Path -Path $inpath -PathType Leaf)) {
 			write-host "[-] Input file not found $($gridin) use -gridin to specify the file csv"
 			exit
 		}
@@ -1084,29 +1097,33 @@ if ($gridviewload) {
 }
 
 # Check snaffler input file and load it
-write-host "[*] Checking input file $in"
-if (!(Test-Path -Path $in -PathType Leaf)) {
-	write-host "[-] Input file not found $in"
+write-host "[*] Checking input file $inpath"
+if (!(Test-Path -Path $inpath -PathType Leaf)) {
+	write-host "[-] Input file not found $inpath"
 	exit
 } else {
 	write-host "[+] Input file exists"
 
 	#Check if file size is  at least 300 bytes
-	$FileSize = (Get-ChildItem $in).Length / 1014
+	$FileSize = (Get-ChildItem $inpath).Length / 1014
 	$FileSizeRound = [math]::Round($FileSize,2)
 
 	if ($FileSizeRound -ge 0.3) {
 		write-host "[+] Input file is $FileSizeRound KB"
-		write-host "[*] Importing data from file"
-		$data = Import-Csv -Delimiter "`t" -Path $in -Header user,timestamp,typ,1,2,3,4,5,6,7,8,9,10
-		$outputname = (Get-Item $in).BaseName
+		write-host "[*] Importing data from file (streaming)"
+		$outputname = (Get-Item $inpath).BaseName
+
+		# Streaming containers
+		$files = [System.Collections.Generic.List[object]]::new()
+		$sharesSet = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+
 
 		$baseInfo = [PsCustomObject]@{
-			Snaffler_File = Split-Path $in -Leaf
-			SHA256 = $(Get-FileHash $in).Hash
+			Snaffler_File = Split-Path $inpath -Leaf
+			SHA256 = $(Get-FileHash $inpath).Hash
 		}
 
-		$firstLine = Get-Content $in -TotalCount 1
+		$firstLine = Get-Content $inpath -TotalCount 1
 
 		# Define the regular expression pattern to extract Computername, User and timestamp
 		$pattern = '\[(?<machine>.*?)\\(?<user>.*?)@.*?\]\s+(?<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}Z)'
@@ -1124,19 +1141,100 @@ if (!(Test-Path -Path $in -PathType Leaf)) {
 	}
 
 }
-write-host "[*] Processing shares"
-# Processing shares
-$shares = foreach ($line in $data) {
-    if($line.Typ -eq "[Share]") {
-		[PsCustomObject]@{
-			unc = $line.2
-		}
+
+write-host "[*] Streaming parse of input file"
+
+# We already read first line for baseInfo, now stream everything.
+# Use .NET StreamReader for speed and low memory.
+$sr = [System.IO.StreamReader]::new($inpath)
+
+try {
+    while (-not $sr.EndOfStream) {
+        $raw = $sr.ReadLine()
+        if ([string]::IsNullOrWhiteSpace($raw)) { continue }
+
+        # Split on tab; keep empties (important because your file has blank columns)
+        $cols = $raw.Split("`t", [System.StringSplitOptions]::None)
+
+        # Need at least 3 columns for Type check: [0]=user, [1]=timestamp, [2]=typ
+        if ($cols.Length -lt 3) { continue }
+
+        $typ = $cols[2]
+
+        if ($typ -eq "[Share]") {
+            # In your format, UNC is column index 4 (0-based): user, time, typ, color, unc, rights
+            if ($cols.Length -gt 4) {
+                $shareUnc = $cols[4]
+                if (-not [string]::IsNullOrWhiteSpace($shareUnc)) {
+                    [void]$sharesSet.Add($shareUnc)
+                }
+            }
+            continue
+        }
+
+        if ($typ -eq "[File]") {
+            # You access these in your script:
+            # severity = $line.1 -> cols[3]
+            # rule     = $line.2 -> cols[4]
+            # keyword  = $line.6 -> cols[8]
+            # modified = $line.8 -> cols[10]
+            # unc      = $line.9 -> cols[11]
+            # content  = $line.10 -> cols[12]
+            if ($cols.Length -lt 12) { continue }
+
+            $unc = $cols[11]
+            if ([string]::IsNullOrWhiteSpace($unc)) { continue }
+
+            $content = if ($cols.Length -gt 12) { $cols[12] } else { '' }
+
+            if ($unescape) {
+                try { $content = [System.Text.RegularExpressions.Regex]::Unescape($content) } catch {}
+                $content = $content -replace ([regex]::Escape("`t")),'@@a@@emsp;'
+                $content = $content -replace ([regex]::Escape("`r`n")),'@@o@@br@@c@@'
+            }
+
+            # UNC sanitize for GetExtension
+            $uncSafe = $unc -replace '[\x00-\x1F]', ''
+            if ($IsWindows -or $PSVersionTable.PSVersion.Major -le 5) {
+                $uncSafe = $uncSafe -replace '[<>:"|?*]', ''
+            }
+            $ext = ''
+            try { $ext = [System.IO.Path]::GetExtension($uncSafe) } catch { $ext = '' }
+
+            # Compute parent once (use uncSafe so Split-Path is less likely to choke)
+            $parent = ''
+            try { $parent = Split-Path -Path $uncSafe -Parent } catch { $parent = '' }
+
+            $parentUrl = $parent.Replace(' ','%20')
+            $uncUrl = $uncSafe.Replace(' ','%20')
+
+            $files.Add([PsCustomObject]@{
+                check     = "@@o@@input type=checkbox value=HighValue@@c@@"
+                done      = "@@o@@input type=checkbox value=done@@c@@"
+                severity  = if ($cols.Length -gt 3)  { $cols[3] }  else { '' }
+                rule      = if ($cols.Length -gt 4)  { $cols[4] }  else { '' }
+                keyword   = if ($cols.Length -gt 8)  { $cols[8] }  else { '' }
+                modified  = if ($cols.Length -gt 10) { $cols[10] } else { '' }
+                unc       = $unc
+                extension = $ext
+                open      = "@@o@@a target=_blank href=file://$parentUrl\ @@c@@@@o@@span class=icon @@c@@@@a@@#x1F4C2;@@o@@/span@@c@@"
+                save      = "@@o@@a target=_blank href=file://$uncUrl download@@c@@@@o@@span class=icon @@c@@@@a@@#x1F4BE;@@o@@/span@@c@@"
+                content   = $content
+            })
+        }
     }
 }
+finally {
+    if ($null -ne $sr) { $sr.Dispose() }
+}
+
+write-host "[*] Processing shares"
+
+$shares = $sharesSet |
+    ForEach-Object { [PsCustomObject]@{ unc = $_ } } |
+    Sort-Object -Property unc
 
 
-#Sort and perform dedup (in case snaffler was runned twice)
-$shares = $shares | Group-Object unc | ForEach-Object { $_.Group[0] } | Sort-Object unc
 
 # Check share count and write to file
 $sharescount = $shares | Measure-Object -Line -Property unc
@@ -1149,56 +1247,6 @@ if ($sharescount.lines -ge 1) {
 	write-host "[?] Was Snaffler executed with parameter -y ?"
 }
 
-# Processing files
-write-host "[*] Processing files"
-
-$files = foreach ($line in $data) {
-    if($line.Typ -eq "[File]" -and $line.9 -ne $Null) {
-		$content = $line.10
-
-		if ($unescape) {
-			try {
-				# Attempt to unescape the content
-				$content = [System.Text.RegularExpressions.Regex]::Unescape($content)
-			} catch {
-				# Suppress the error message
-				$content = $content
-			}
-			#Format HTML
-			$content = $content -replace ([regex]::Escape("`t")),'@@a@@emsp;'
-			$content = $content -replace ([regex]::Escape("`r`n")),'@@o@@br@@c@@'
-		}
-
-		#Better handling of control chars in UNC. Avoid GetExtension to throw
-		$unc = [string]$line.9
-        $uncSafe = $unc -replace '[\x00-\x1F]', ''
-        if ($IsWindows -or $PSVersionTable.PSVersion.Major -le 5) {
-            $uncSafe = $uncSafe -replace '[<>:"|?*]', ''
-        }
-        $ext = ''
-        try { $ext = [System.IO.Path]::GetExtension($uncSafe) } catch { $ext = '' }
-
-		$parent = Split-Path -Path $unc -Parent
-		$parentUrl = $parent.Replace(' ','%20')
-		$uncUrl = $unc.Replace(' ','%20')
-
-		[PsCustomObject]@{
-			check = "@@o@@input type=checkbox value=HighValue@@c@@"
-			done = "@@o@@input type=checkbox value=done@@c@@"
-			severity = $line.1
-			rule = $line.2
-			keyword = $line.6
-			modified = $line.8
-			unc = $unc
-			extension = $ext
-			#Since HTML chars are encoded to entities, special strings are used and replaced later
-			open = "@@o@@a target=_blank href=file://$parentUrl\ @@c@@@@o@@span class=icon @@c@@@@a@@#x1F4C2;@@o@@/span@@c@@"
-			save = "@@o@@a target=_blank href=file://$uncUrl download@@c@@@@o@@span class=icon @@c@@@@a@@#x1F4BE;@@o@@/span@@c@@"
-
-			content = $content
-		}
-    }
-}
 
 
 # Define fixed severity order
