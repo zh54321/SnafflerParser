@@ -116,7 +116,7 @@ $inPath = [System.IO.Path]::GetFullPath($inPath)
 function gridview($action){
 	if ($action -eq "load") {
 		write-host "[*] Loading stored Gridview file: $($gridin)"
-		if (!(Test-Path -Path $inpath -PathType Leaf)) {
+		if (!(Test-Path -LiteralPath $inpath -PathType Leaf)) {
 			write-host "[-] Input file not found $($gridin) use -gridin to specify the file csv"
 			exit
 		}
@@ -253,7 +253,7 @@ function exporttxt($object ,$name){
 # Function to export as JSON
 function exportjson($object ,$name){
 	write-host "[*] Storing: $($outputname)_loot_$($name).json"
-	$object | select-object severity,rule,keyword,modified,extension,unc,content | ConvertTo-Json -depth 100  | Out-File -FilePath "$($outputname)_loot_$($name).json"
+	$object | select-object severity,rule,keyword,modified,extension,unc,content | ConvertTo-Json -depth 50  | Out-File -FilePath "$($outputname)_loot_$($name).json"
 }
 
 # Function to export as HTML
@@ -1098,7 +1098,7 @@ if ($gridviewload) {
 
 # Check snaffler input file and load it
 write-host "[*] Checking input file $inpath"
-if (!(Test-Path -Path $inpath -PathType Leaf)) {
+if (!(Test-Path -LiteralPath $inpath -PathType Leaf)) {
 	write-host "[-] Input file not found $inpath"
 	exit
 } else {
@@ -1110,7 +1110,7 @@ if (!(Test-Path -Path $inpath -PathType Leaf)) {
 
 	if ($FileSizeRound -ge 0.3) {
 		write-host "[+] Input file is $FileSizeRound KB"
-		write-host "[*] Importing data from file (streaming)"
+		write-host "[*] Importing data from file"
 		$outputname = (Get-Item $inpath).BaseName
 
 		# Streaming containers
@@ -1153,7 +1153,7 @@ try {
         $raw = $sr.ReadLine()
         if ([string]::IsNullOrWhiteSpace($raw)) { continue }
 
-        # Split on tab; keep empties (important because your file has blank columns)
+        # Split on tab; keep empties (important because the snaffler output file has blank columns)
         $cols = $raw.Split("`t", [System.StringSplitOptions]::None)
 
         # Need at least 3 columns for Type check: [0]=user, [1]=timestamp, [2]=typ
@@ -1173,7 +1173,6 @@ try {
         }
 
         if ($typ -eq "[File]") {
-            # You access these in your script:
             # severity = $line.1 -> cols[3]
             # rule     = $line.2 -> cols[4]
             # keyword  = $line.6 -> cols[8]
@@ -1201,7 +1200,7 @@ try {
             $ext = ''
             try { $ext = [System.IO.Path]::GetExtension($uncSafe) } catch { $ext = '' }
 
-            # Compute parent once (use uncSafe so Split-Path is less likely to choke)
+            # Compute parent once (use uncSafe so Split-Path is less likely to break)
             $parent = ''
             try { $parent = Split-Path -Path $uncSafe -Parent } catch { $parent = '' }
 
