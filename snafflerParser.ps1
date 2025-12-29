@@ -1136,7 +1136,7 @@ $shares = foreach ($line in $data) {
 
 
 #Sort and perform dedup (in case snaffler was runned twice)
-$shares = $shares | Sort-Object -Property unc -Unique
+$shares = $shares | Group-Object unc | ForEach-Object { $_.Group[0] } | Sort-Object unc
 
 # Check share count and write to file
 $sharescount = $shares | Measure-Object -Line -Property unc
@@ -1178,6 +1178,9 @@ $files = foreach ($line in $data) {
         $ext = ''
         try { $ext = [System.IO.Path]::GetExtension($uncSafe) } catch { $ext = '' }
 
+		$parent = Split-Path -Path $unc -Parent
+		$parentUrl = $parent.Replace(' ','%20')
+		$uncUrl = $unc.Replace(' ','%20')
 
 		[PsCustomObject]@{
 			check = "@@o@@input type=checkbox value=HighValue@@c@@"
@@ -1189,8 +1192,9 @@ $files = foreach ($line in $data) {
 			unc = $unc
 			extension = $ext
 			#Since HTML chars are encoded to entities, special strings are used and replaced later
-			open = "@@o@@a target=_blank href=file://$($(Split-Path -Parent $($line.9)).Replace(' ','%20'))\ @@c@@@@o@@span class=icon @@c@@@@a@@#x1F4C2;@@o@@/span@@c@@"
-			save = "@@o@@a target=_blank href=file://$($($line.9).Replace(' ','%20')) download@@c@@@@o@@span class=icon @@c@@@@a@@#x1F4BE;@@o@@/span@@c@@"
+			open = "@@o@@a target=_blank href=file://$parentUrl\ @@c@@@@o@@span class=icon @@c@@@@a@@#x1F4C2;@@o@@/span@@c@@"
+			save = "@@o@@a target=_blank href=file://$uncUrl download@@c@@@@o@@span class=icon @@c@@@@a@@#x1F4BE;@@o@@/span@@c@@"
+
 			content = $content
 		}
     }
