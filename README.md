@@ -1,18 +1,24 @@
 # Snaffler Output File Parser
 Especially in large environments, the Snaffler output gets very large and time-consuming to analyze.
 
-This script parse the Snaffler output file (TSV format required) and:
-- Beautify it: Proper tables and different output formats like TXT, CSV, HTML, JSON or PS Gridview.
-- The HTML output file:
-    - Supports basic sorting and filtering (severity & extension)
-    - Highlights the finding keyword in the file preview text
-    - Contains direct links to the parent folder of the file and a download link for the file itself.
-    - Contains basing information about the Snaffler job.
-    - Support with the review workflow by let you mark reviewed or interesting items.
-    - Can unescape the preview text to make it more readable.
-- Sorts based on the severity (black, red, yellow, green) and then by date or unc.
-- Can export all the shares to the Explorer++ config files as bookmarks.
-- Generate a list of all shares Snaffler was able to access (might be useful for your client).
+This script parses the Snaffler output file (TSV format required) and:
+- Beautifies results into readable tables and exports to TXT, CSV, HTML, JSON or PS Gridview.
+- Generates an interactive HTML report with:
+  - Filtering (severity, extension, modified year) and full-text search
+  - Dynamic sorting
+  - Keyword highlighting inside the preview text
+  - Direct actions (open parent folder, download file, copy UNC, copy parent UNC)
+  - Review workflow with persisted state:
+    - ★ flagged (interesting)
+    - ✓ done (reviewed)
+  - Optional *unescape* mode for improved preview readability (experimental)
+  - Pagination for very large datasets
+  - Column chooser (persisted per report)
+  - Export of the currently filtered view to CSV
+  - Snaffler Job metadata (start/end /host/user/timestamps...) 
+- Sorts output by *severity (Black/Red/Yellow/Green)* and then by modified date (default) or another field
+- Exports all discovered *shares* to a text file
+- Can export accessible shares as *Explorer++ bookmarks*
 
 # Show Case
 Parsing output file:
@@ -43,44 +49,72 @@ The different file output options are:
 - `-outformat html` Write html
 - `-outformat json` Write json
 
-Those files can be splitted regarding the finding severity (black, red, yellow, green) using the `-split` switch.
+Those files can be split by finding severity (black, red, yellow, green) using the `-split` switch.
 
 Additonally a PS gridview output can be showed using ``-gridview`.
 
 ## HTML Report
 
-### Dark Mode and Light Mode
-Dark mode is no default.
+### Features
 
-Use `-lightmode` to switch back to the light mode HTML report.
+- Pagination for large reports
+- Full-text search (UNC / rule / keyword / content) with highlighting
+- Filters:
+  - Severity (Black / Red / Yellow / Green)
+  - Modified year
+  - File extension (with extension search)
+  - Status filters: ★ flagged only / hide ✓ done
+- Sorting by clicking table headers (severity grouping is preserved unless you switch to global sort)
+- Keyword highlighting in preview content
+- Actions per row:
+  - Copy full UNC path
+  - Copy parent UNC path
+  - Open parent folder (`file://`)
+  - Download file (`file://`)
+- Column chooser (persisted per report)
+- Export the current filtered view to CSV
+- Report metadata header + “Job Info” modal (input file, host/user, hash, timestamps, durations)
+- Dark / Light mode toggle
 
-### Custom Checkboxes for the Review Process
-There are now 2 custom checkboxes:
-- check : Mark interesting files to check later.
-- done  : Mark files you have checked
 
-By clicking on a checkbox, you can use the W, S, A, D keys or the arrow keys to navigate through the checkboxes within the columns, and press the spacebar to toggle them. This allows you to efficiently navigate and mark items in the list without using the mouse.
+### Review workflow (★ / ✓)
 
-Use the filter buttons above to hide files you have checked, or to only display interesting files.
+Two checkboxes support a quick review process:
 
-![custom checkboxes](/images/custom_checkboxes.gif "Custom checkboxes")
+- ★ (flagged): mark interesting files to revisit
+- ✓ (done): mark reviewed files
 
-Important: to save the current markings you have to click on the 'Save HTML' which will download a copy of the file including your checkbox selection.
+Keyboard navigation:
+- Use *W/S* or *↑/↓* to move up/down within the checkbox column
+- Use *A/D* or *←/→* to move between ★ and ✓
+- Press *Space* to toggle the focused checkbox
+- Shortcut keys:
+  - `1` toggles ★
+  - `2` toggles ✓
 
-### Unescaping (experimental)
-Snaffler escapes line breaks etc. in the preview content to display it in the command line.
-SnafflerParser can unescape the preview text to make the code better readable in HTML or PS GridView.
+Filtering helpers:
+- “Show ★ only” to focus on flagged items
+- “Hide ✓ done” to remove reviewed items from the view
 
-Simply use the switch `-unescape`
+
+Persistence: checkbox state is saved in your browser’s *localStorage* for this report.  
+To permanently store the current markings, click *Save HTML* in the report (downloads a copy with your state embedded).
+
+### Unescaping preview text (experimental)
+
+Snaffler escapes line breaks and other characters in preview content to display it in the terminal.  
+The HTML report includes an **Unescape** toggle that converts common escaped sequences (like `\n`, `\r\n`, `\t`) into readable formatting.
+
 
 Example:
 
 ![Unescape example](/images/unescape.png "Unescape example")
 
-Note: Makes the rows larger.
+> Note: Unescaping may also change strings that were not originally escaped by Snaffler. Treat it as a readability aid.
 
 ## Sorting
-The output will always be sorted regarding the severity than it can be sorted by:
+Output is always grouped by severity (Black → Red → Yellow → Green).
+Within each group you can sort by:
 - `-sort modified` File modified date (default)
 - `-sort keyword` Snaffler keyword
 - `-sort unc` File UNC Path
@@ -88,26 +122,74 @@ The output will always be sorted regarding the severity than it can be sorted by
 
 ## Explorer++ Integration
 
-Explorer++ is an alternative file explorer on windows.
+Explorer++ is a lightweight alternative file explorer for Windows that supports running in a different user context, including the `/netonly` switch. This is especially useful during assessments where the workstation or VM is not domain-joined.
+
+### What SnafflerParser does
+
+When using the `-pte` switch, SnafflerParser integrates directly with Explorer++ by managing its `config.xml` file:
+
+- Generates `config.xml` if it does not exist (portable mode)
+- Ensures the *Bookmarks Toolbar* is enabled
+- Removes previously generated bookmarks
+- Creates a bookmark folder per host
+- Adds all accessible shares as bookmarks under the corresponding host
+- Allows quick navigation to shares without repeated authentication prompts
+
+### Usage
+
+1. Download Explorer++ from  
+   https://github.com/derceg/explorerplusplus
+
+2. Place `Explorer++.exe` in the same directory as `snafflerParser.ps1`
+
+3. Parse the Snaffler output and export shares to Explorer++:
+   ```powershell
+   .\snafflerParser.ps1 -in snafflerout.txt -pte
+   ```
+3. Launch Explorer++ under a different user context:
+   ```powershell
+   runas /user:DOMAIN\user /netonly Explorer++.exe
+   ```
+5. Use the Bookmarks Toolbar to browse discovered shares quickly.  
+    ![Explorer++ Bookmarks](/images/explorerpp_bookmarks.png "Explorer++ Bookmarks")
 
 
-The great thing is that unlike the Windows Explorer it can be executed in another user's context including the `/netonly` switch. This is useful when performing a pentest from a dedicated, non-domain joined pentest notebook or VM.
-
-Donwload Explorer++ https://github.com/derceg/explorerplusplus to the same folder and configure the portable mode:
-
-![Configure Explorer++ in portable mode](/images/explorerpp_settings.png "Configure portable mode")
-
-This will create an config.xml in the same folder.
-
-Parse the Snaffler file using the `-pte` switch to export all accessible shares as bookmarks to the Explorer++ config XML: `.\snafflerParser.ps1 -in Snaffler_output.txt -pte`
-
-Explorer++ can then be executed as the user which have access to the shares: `runas /user:domain\user /netonly Explorerpp.exe`
-This allows easy access to the shares without authenticate for every share via the bookmark bar:
-
-![Explorer++ Bookmarks](/images/explorerpp_bookmarks.png "Explorer++ Bookmarks")
+Why this is useful:
+- No need to authenticate separately for each share
+- Works well from non-domain-joined systems
 
 
 ## Changelog
+
+### 2026-01-04
+
+#### Improved
+- Faster parsing, processing, and report generation (roughly 50% faster overall)
+- Reduced HTML report size (roughly 60% smaller)
+- Explorer++ integration: `Config.xml` will be generated if it does not exist. The bookmark bar will be enabled if disabled.
+- HTML report overhaul
+	- Pagination for large reports (major performance improvement for reports with >100k files)
+	- Additional filters: Modified date (year-based filtering)
+	- Improved file extension filtering
+	- Dark/Light mode toggle directly in the report
+	- Proper line wrapping for long UNC paths
+	- Export filtered results to CSV
+	- Persisted flagged (★) and reviewed (✓) states using local storage
+	- Columns can be shown/hidden (settings stored per report)
+	- Full-text search with keyword highlighting
+	- Improved and more compact filter layout
+	- Action bar with additional functions (copy full UNC path / copy parent folder path)
+	- Header row with report metadata and an info modal
+	- Button to unescape content (experimental)
+
+
+#### Fixed
+- Added checks for illegal UNC paths (fixes issue #5)
+- The pagination should fix issue #4
+
+#### Removed
+- Removed the `-lightmode` parameter.
+- Removed the `-unescape` parameter.
 
 ### 2025-01-25
 
