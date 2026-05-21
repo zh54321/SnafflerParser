@@ -2985,7 +2985,7 @@ try {
             $unc = $cols[11]
             if ([string]::IsNullOrWhiteSpace($unc)) { continue }
 
-            $content = if ($cols.Length -gt 12) { $cols[12] } else { '' }
+            $content = if ($cols.Length -gt 13) { $cols[13] } else { '' }
 
             # UNC sanitize for GetExtension
             $uncSafe = $unc -replace '[\x00-\x1F]', ''
