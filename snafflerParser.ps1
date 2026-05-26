@@ -131,7 +131,7 @@ function Format-TimePrettyUtc {
 }
 
 function Format-DurationPretty {
-    param([TimeSpan]$ts)
+    param([Nullable[TimeSpan]]$ts)
 
     if ($null -eq $ts) { return "" }
 
@@ -2800,8 +2800,8 @@ $baseInfoForModal = [pscustomobject]@{
   'User'              = $baseInfo.Snaffler_User
 
   'Started'           = (Format-TimePrettyUtc $baseInfo.Snaffler_StartTime)
-  'Finished'          = (Format-TimePrettyUtc $finishedObj)
-  'Snaffler duration' = (Format-DurationPretty $durationObj)
+  'Finished'          = if ($null -ne $finishedObj) { Format-TimePrettyUtc $finishedObj } else { '-' }
+  'Snaffler duration' = if ($null -ne $durationObj) { Format-DurationPretty $durationObj } else { '-' }
 
   'Report generated'  = (Format-TimePrettyUtc $baseInfo.Report_GeneratedUtc)
   'Parser duration'   = (Format-DurationPretty $baseInfo.Parser_Duration)
