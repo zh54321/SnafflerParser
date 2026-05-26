@@ -161,6 +161,13 @@ Why this is useful:
 
 ## Changelog
 
+### 2026-05-26
+
+#### Fixed
+- Content column no longer empty when parsing output from newer versions of Snaffler (>=1.0.244). Newer Snaffler adds an original-filename field before the content column (used for SCCM
+  content-library files). The parser now handles both the old (13-column) and new (14-column) format transparently.
+- No longer crashes when parsing output from an interrupted Snaffler job (missing end timestamp / duration).
+
 ### 2026-01-04
 
 #### Improved
