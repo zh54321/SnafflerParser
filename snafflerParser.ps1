@@ -2974,18 +2974,32 @@ try {
         }
 
         if ($typ -eq "[File]") {
-            # severity = $line.1 -> cols[3]
-            # rule     = $line.2 -> cols[4]
-            # keyword  = $line.6 -> cols[8]
-            # modified = $line.8 -> cols[10]
-            # unc      = $line.9 -> cols[11]
-            # content  = $line.10 -> cols[12]
+            # A [File] line is tab-separated. Columns by index:
+            #   cols[0]  user@host
+            #   cols[1]  timestamp
+            #   cols[2]  [File]
+            #   cols[3]  severity (Black/Red/Yellow/Green)
+            #   cols[4]  rule name
+            #   cols[5]  readable  (R or empty)
+            #   cols[6]  writable  (W or empty)
+            #   cols[7]  modifiable (M or empty)
+            #   cols[8]  matched keyword/string
+            #   cols[9]  file size (bytes)
+            #   cols[10] last-modified timestamp
+            #   cols[11] UNC path
+            #
+            # Snaffler added a new column after the UNC in release 1.0.244:
+            #   OLD (13 cols): cols[12] = content (matched text snippet)
+            #   NEW (14 cols): cols[12] = original filename (for SCCM content-lib files; usually empty)
+            #                  cols[13] = content
             if ($cols.Length -lt 12) { continue }
 
             $unc = $cols[11]
             if ([string]::IsNullOrWhiteSpace($unc)) { continue }
 
-            $content = if ($cols.Length -gt 12) { $cols[12] } else { '' }
+            # Support both old (13-col) and new (14-col) Snaffler output formats.
+            # The new format added alt_filename at cols[12]; content shifted to cols[13].
+            $content = if ($cols.Length -gt 13) { $cols[13] } elseif ($cols.Length -gt 12) { $cols[12] } else { '' }
 
             # UNC sanitize for GetExtension
             $uncSafe = $unc -replace '[\x00-\x1F]', ''
